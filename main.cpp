@@ -12,27 +12,21 @@ using namespace cv;
 
 int main()
 {
-    std::string file_name = string(RES_DIR) + string("/5.jpeg");
+    std::string file_name = string(RES_DIR) + string("/3-2.jpeg");
     cv::Mat img = imread(file_name);
-    cv::Mat sky_mask, ground_mask;
+    cv::Mat ground_mask;
 
     SkyDetector sky_det;
-    if (sky_det.extract_sky(img, sky_mask))
-    {
-        cout << "sky found" << endl;
-        imshow("sky-mask", sky_mask);
-    }
-    else
-        cout << "no sky" << endl;
-
-    if (sky_det.extract_sky(img, ground_mask))
+    if (sky_det.extract_ground(img, ground_mask))
     {
         cout << "ground found" << endl;
         imshow("ground-mask", ground_mask);
+        waitKey();
     }
     else
-        cout << "no sky" << endl;
-    cout << "finished" << endl;
+        cout << "no ground" << endl;
+
+    destroyAllWindows();
 
     return 0;
 }
