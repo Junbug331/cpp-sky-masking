@@ -2,6 +2,7 @@
 #include <cassert>
 #include <numeric>
 #include <memory>
+#include <exception>
 #include <algorithm>
 
 #include "sky_detector.hpp"
@@ -561,18 +562,18 @@ void SkyDetector::refine_border(const std::vector<int> &border, const cv::Mat &i
     row_index = 0;
     for (int row = 0; row < labels.rows; ++row)
     {
-        if (labels.at<float>(row, 0) == 0.0)
+        if (labels.at<int>(row, 0) == 0)
         {
             sky_label_0_image.at<uchar>(row_index, 0) = sky_image_non_zero.at<uchar>(row, 0);
             sky_label_0_image.at<uchar>(row_index, 1) = sky_image_non_zero.at<uchar>(row, 1);
             sky_label_0_image.at<uchar>(row_index, 2) = sky_image_non_zero.at<uchar>(row, 2);
-            row_index++;
+            ++row_index;
         }
     }
     row_index = 0;
     for (int row = 0; row < labels.rows; ++row)
     {
-        if (labels.at<float>(row, 0) == 1.0)
+        if (labels.at<int>(row, 0) == 1)
         {
             sky_label_1_image.at<uchar>(row_index, 0) = sky_image_non_zero.at<uchar>(row, 0);
             sky_label_1_image.at<uchar>(row_index, 1) = sky_image_non_zero.at<uchar>(row, 1);
@@ -703,7 +704,17 @@ bool SkyDetector::extract_ground(const cv::Mat &img, cv::Mat &ground_mask)
         std::cout << "It has a partial sky region...\n";
         std::vector<int> border_new;
         //std::cout << "Refining region...\n";
-        refine_border(sky_border_optimal, img, border_new);
+
+        try {
+            refine_border(sky_border_optimal, img, border_new);
+        }
+        catch (...) {
+            std::cout << "Error catched" << std::endl;
+            std::cout << "using naive border calculation" << std::endl;
+            calculate_border_naive(gradient_info_map, sky_border_naive);
+            ground_mask = make_sky_mask(img, sky_border_naive, 0);
+            return true;
+        }
         cleanup_border(border_new);
         ground_mask = make_sky_mask(img, border_new, 0);
         if (!test_ground_mask(ground_mask, border_new))

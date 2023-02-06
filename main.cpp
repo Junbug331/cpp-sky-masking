@@ -78,10 +78,13 @@ int main()
         double N = ground_mask.rows * ground_mask.cols;
         double ratio = pixels_num / N;
         cout << "ground ratio: " << ratio << endl;
+        imshow("gruond_mask", ground_mask);
         imwrite(res_name, ground_mask);
+        waitKey();
+        destroyAllWindows();
     }
     else
         cout << "ground NOT found" << endl;
-    
+
     return 0;
 }
