@@ -3,7 +3,9 @@ project(sky-masking)
 set(TARGET ${PROJECT_NAME})
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_definitions(-DRES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/res")
+add_definitions(-DDATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/test")
+#add_definitions(-DDATA_DIR="${CMAKE_CURRENT_SOURCE_DIR}/dataset7")
+add_definitions(-DRES_DIR="${CMAKE_CURRENT_SOURCE_DIR}/result")
 
 add_subdirectory(SkyDetector)
 

@@ -438,10 +438,10 @@ void SkyDetector::calculate_border_naive(const cv::Mat& gradient_info_map, std::
  * @param thresh_3
  * @return
  */
-bool SkyDetector::has_sky_region(const std::vector<int> &border,
+bool SkyDetector::has_sky_region(const std::vector<int> &border, double &border_mean, double &border_diff_mean,
                                  double thresh_1, double thresh_2, double thresh_3)
 {
-    double border_mean = 0.0;
+    border_mean = 0.0;
     border_mean = std::accumulate(border.begin(), border.end(), 0.0);
     border_mean /= static_cast<double>(border.size());
 
@@ -456,7 +456,7 @@ bool SkyDetector::has_sky_region(const std::vector<int> &border,
     std::adjacent_difference(border.begin(), border.end(), border_diff.begin(),
                              [](const int &a, const int &b)
                              { return std::abs(a - b); });
-    double border_diff_mean = 0.0; // ASADSBP
+    border_diff_mean = 0.0; // ASADSBP
     border_diff_mean = std::accumulate(border_diff.begin() + 1, border_diff.end(), 0.0);
     border_diff_mean /= static_cast<double>(border.size());
     // Large ASADSBP means frequent chagnes in the sky border position function
@@ -647,8 +647,8 @@ bool SkyDetector::extract_sky(const cv::Mat &img, cv::Mat &sky_mask)
     std::vector<int> sky_border_optimal, sky_border_naive;
     cv::Mat gradient_info_map;
     extract_border_optimal(img, sky_border_optimal, gradient_info_map);
-
-    if (!has_sky_region(sky_border_optimal, img_H / 30, img_H / 4, 20))
+    double border_mean, border_diff_mean;
+    if (!has_sky_region(sky_border_optimal, border_mean, border_diff_mean, img_H / 30, img_H / 4, 20))
     {
         //std::cout << "No sky area extracted" << std::endl;
         return false;
@@ -678,13 +678,26 @@ bool SkyDetector::extract_ground(const cv::Mat &img, cv::Mat &ground_mask)
     std::vector<int> sky_border_optimal, sky_border_naive;
     cv::Mat gradient_info_map;
     extract_border_optimal(img, sky_border_optimal, gradient_info_map);
-
-    if (!has_sky_region(sky_border_optimal, img_H / 30, img_H / 15, 20))
+    
+    double border_mean, border_diff_mean;
+    
+    if (!has_sky_region(sky_border_optimal, border_mean, border_diff_mean, img_H / 30, img_H / 15, 20))
     {
         //std::cout << "No sky area extracted" << std::endl;
         return false;
     }
     //std::cout << "It has sky region...\n";
+    std::cout << "border_mean / img_H = " << border_mean / img_H << std::endl;
+    
+    if (border_mean > (double)img_H * 0.65 && border_diff_mean >= 100 )
+    {
+        std::cout << "Debug - edge case" << std::endl;
+        std::cout << "using naive border calculation" << std::endl;
+        calculate_border_naive(gradient_info_map, sky_border_naive);
+        ground_mask = make_sky_mask(img, sky_border_naive, 0);
+        return true;
+    }
+    
     if (has_partial_sky_region(sky_border_optimal, img_W / 3))
     {
         std::cout << "It has a partial sky region...\n";
@@ -711,7 +724,6 @@ bool SkyDetector::extract_ground(const cv::Mat &img, cv::Mat &ground_mask)
         calculate_border_naive(gradient_info_map, sky_border_naive);
         ground_mask = make_sky_mask(img, sky_border_naive, 0);
     }
-
     return true;
 }
 
@@ -738,22 +750,41 @@ bool SkyDetector::test_ground_mask(const cv::Mat &ground_mask, const std::vector
 
 void SkyDetector::cleanup_border(std::vector<int> &border)
 {
-    if (border[0] < 5)
+    int val = std::accumulate(border.begin(), border.end(), 0) / border.size();
+    //int val = *(std::max_element(border.begin(), border.end()));
+    
+    if (border[0] < 10)
     {
-        int val = std::accumulate(border.begin(), border.end(), 0) / (double)border.size();
         for (int i=1; i<border.size(); ++i)
         {
-            if (border[i] > 5)
+            if (border[i] > 10)
             {
                 val = border[i];
                 break;
             }
         }
+        border[0] = val;
     }
-
-    for (int i=1; i<border.size(); ++i)
+    if (border[border.size()-1] < 10)
     {
-        if (border[i] < 5)
-            border[i] = border[i-1];
+        for (int i = border.size()-1; i > 0; --i)
+        {
+            if (border[i] > 10)
+            {
+                val = border[i];
+                break;
+            }
+        }
+        border[border.size()-1] = val;
+    }
+    
+    border[0] = border[0] < 10 ? val : border[0];
+    border[border.size()-1] = border[border.size()-1] < 10 ? val : border[border.size()-1];
+    
+
+    for (int i=1; i<border.size()-1; ++i)
+    {
+        if (border[i] < 10)
+            border[i] = std::max(border[i-1], border[i+1]);
     }
 }

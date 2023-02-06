@@ -24,7 +24,7 @@ private:
     double calculate_sky_energy_gray(const std::vector<int> &border, const cv::Mat &img);
 
     cv::Mat make_sky_mask(const cv::Mat &img, const std::vector<int> &border, int type=1);
-    bool has_sky_region(const std::vector<int>& border,
+    bool has_sky_region(const std::vector<int>& border, double &border_mean, double &border_diff_mean,
                         double thresh_1, double thresh_2, double thresh_3);
     bool has_partial_sky_region(const std::vector<int> &border, double thresh_1);
     void refine_border(const std::vector<int> &border,  const cv::Mat &img, std::vector<int> &refined_border);
